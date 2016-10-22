@@ -11,8 +11,108 @@ public class BattleSceneControl : MonoBehaviour {
     float deltaX;
     int magicConstant = 53;
 
+
+    Chunk[][] map;
+
+    Chunk chosenChunk;
+    int chx;
+    int chy;
+    bool move = false;
+
+    float dx;
+    float dy;
+
+    public GUIStyle coverButtonStyle;
+
     GameObject[] playerUnitsGO;
     Unit[] playerUnits;
+    float[][] dist;
+    bool[][] flags;
+
+    bool Valid(int a, int b)
+    {
+        if (a < 0)
+        {
+            return false;
+        }
+        if (b < 0)
+        {
+            return false;
+        }
+        if (a >= 6)
+        {
+            return false;
+        }
+        if (b >= 6)
+        {
+            return false;
+        }
+        if (map[a][b].obj.isEmpty() && map[a][b].movebleObject.isEmpty())
+        {
+            return true;
+        }
+        return false;
+    }
+
+    float Len(int a, int b, int c, int d)
+    {
+        return Mathf.Sqrt((a - c) * (a - c) + (b - d) * (b - d));
+    }
+
+    void Dijkstra(int a, int b)
+    {
+        int INF = 10000000;
+        int n = 6;
+        int k = 6;
+
+        for(int i = 0; i < n; i++)
+        {
+            for(int j = 0; j < k; j++)
+            {
+                dist[i][j] = INF;
+                flags[i][j] = false;
+            }
+        }
+
+        dist[a][b] = 0;
+        int step = 0;
+        while ((dist[a][b] < INF - 1) && (step < 50))
+        {
+            step++;
+           // Debug.Log(dist[a][b]);
+            for(int i = -1; i <= 1; i++)
+            {
+                for(int j = -1; j <= 1; j++)
+                {
+                   // Debug.Log(Valid(a + i, b + j));
+                    if (Valid(a + i, b + j) && (dist[a + i][b + j] > dist[a][b] + Len(a, b, a + i, b + j)))
+                    {
+
+                        dist[a + i][b + j] = dist[a][b] + Len(a, b, a + i, b + j);
+                    }
+                }
+            }
+
+            flags[a][b] = true;
+
+            float min = INF;
+            for(int i = 0; i < 6; i++)
+            {
+                for(int j = 0; j < 6; j++)
+                {
+                    if ((dist[i][j] < min) && (!flags[i][j]))
+                    {
+                        a = i;
+                        b = j;
+                        min = dist[i][j];
+                    }
+                }
+            }
+
+        }
+
+
+    }
 
     // Use this for initialization
     void Start () {
@@ -32,11 +132,15 @@ public class BattleSceneControl : MonoBehaviour {
         deltaX = Screen.width - 6 * dx;
         deltaX /= 2;
 
+        dist = new float[6][];
+        flags = new bool[6][];
         map = new Chunk[6][];
         chunks = new GameObject[6][];
         for (int i = 0; i < 6; i++)
         {
             map[i] = new Chunk[6];
+            dist[i] = new float[6];
+            flags[i] = new bool[6];
             chunks[i] = new GameObject[6];
             for(int j = 0; j < 6; j++)
             {
@@ -117,44 +221,92 @@ public class BattleSceneControl : MonoBehaviour {
         }
     }
 
-    Chunk[][] map;
-
-    Chunk chosenChunk;
-    int chx;
-    int chy;
-    bool move = false;
-
-    float dx;
-    float dy;
-
-    public GUIStyle coverButtonStyle;
-
     void OnGUI()
     {
-        for(int i = 0; i < 6; i++)
+        for (int i = 0; i < 6; i++)
         {
-            for(int j = 0; j < 6; j++)
+            for (int j = 0; j < 6; j++)
             {
-                    if (GUI.Button(new Rect(i * dx + deltaX, j * dy, dx, dy), "", coverButtonStyle))
+                string s;
+                if ((!move) || (dist[i][5 - j] > GetUnit(chx, chy).unit.curAP * GetUnit(chx, chy).unit.speed) || (dist[i][5 - j] == 0))
+                {
+                    s = "";
+                }
+                else
+                {
+                    int k;
+                    for(k = 0; k <= GetUnit(chx, chy).unit.curAP; k++)
                     {
-                        if (!move)
+                        if (dist[i][5 - j] < k * GetUnit(chx, chy).unit.speed)
                         {
-                            chosenChunk = map[i][5 - j];
+                            break;
+                        }
+                    }
+                    s = (k - 1).ToString();
+                }
+                if (GUI.Button(new Rect(i * dx + deltaX, j * dy, dx, dy), s , coverButtonStyle))
+                {
+                    if (!move)
+                    {
+                        chosenChunk = map[i][5 - j];
+                        chx = i;
+                        chy = 5 - j;
+                    }
+                    else
+                    {
+                        if (map[i][5 - j].obj.isEmpty() && map[i][5 - j].movebleObject.isEmpty() && (GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed >= dist[i][5 - j]))
+                        {
+                            Swap(chx, chy, i, 5 - j);
                             chx = i;
                             chy = 5 - j;
                         }
-                        else
-                        {
-                            if (map[i][5 - j].obj.isEmpty() && map[i][5 - j].movebleObject.isEmpty() && (GetUnit(i, 5 - j).unit.curAP > 0))
-                            {
-                                Swap(chx, chy, i, 5 - j);
-                                chx = i;
-                                chy = 5 - j;
-                            }
-                            move = false;
-                        }
+                        move = false;
+                        // Debug.Log(dist[i][5 - j]);
                     }
                 }
+                if (move && (dist[i][5 - j] <= GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed))
+                {
+                    if (!Valid(i - 1, 5 - j) || (dist[i - 1][5 - j] > GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed))
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, true);
+                    }
+                    else
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, false);
+                    }
+                    if (!Valid(i + 1, 5 - j) || (dist[i + 1][5 - j] > GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed))
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, true);
+                    }
+                    else
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, false);
+                    }
+                    if (!Valid(i, 5 - j - 1) || (dist[i][5 - j - 1] > GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed))
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, true);
+                    }
+                    else
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, false);
+                    }
+                    if (!Valid(i, 5 - j + 1) || (dist[i][5 - j + 1] > GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed))
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, true);
+                    }
+                    else
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, false);
+                    }
+                }
+                else
+                {
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, false);
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, false);
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, false);
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, false);
+                }
+            }
         }
         if (chosenChunk != null)
         {
@@ -163,6 +315,10 @@ public class BattleSceneControl : MonoBehaviour {
                 if (GUI.Button(new Rect(Screen.width / 3, dy * 6, Screen.width / 6, dy), "Move"))
                 {
                     move = !move;
+                    if (move)
+                    {
+                        Dijkstra(chx, chy);
+                    }
                 }
                 if (GUI.Button(new Rect(Screen.width / 3, dy * 7, Screen.width / 6, dy), "Attack"))
                 {

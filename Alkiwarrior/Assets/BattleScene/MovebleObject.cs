@@ -27,7 +27,7 @@ public class MovebleObject{
         this.armour = new Armour(Random.Range(1, 4));
         this.damage = new Damage(Random.Range(0, 2) + balance - this.armour.armour - 1);
         this.maxHits = Random.Range(3, 6);
-        this.speed = Random.Range(1, 3);
+        this.speed = Random.Range(1, 2);
         this.maxAP = Random.Range(2, 4);
         this.curAP = this.maxAP;
         this.curHits = this.maxHits;
