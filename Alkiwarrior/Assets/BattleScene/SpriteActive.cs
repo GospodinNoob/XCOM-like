@@ -5,7 +5,7 @@ public class SpriteActive : MonoBehaviour {
 
     public GameObject grass;
     public GameObject box;
-    public GameObject top, bot, left, right;
+    public GameObject top, bot, left, right, attack, playerTrue;
 
 	// Use this for initialization
 	void Start () {
@@ -14,6 +14,14 @@ public class SpriteActive : MonoBehaviour {
 
     public void setIdActive(int id, bool tf)
     {
+        if (id == -6)
+        {
+            playerTrue.active = tf;
+        }
+        if (id == -5)
+        {
+            attack.active = tf;
+        }
         if (id == -1)
         {
             top.active = tf;

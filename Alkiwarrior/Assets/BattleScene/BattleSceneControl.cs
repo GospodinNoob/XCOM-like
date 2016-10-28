@@ -11,13 +11,15 @@ public class BattleSceneControl : MonoBehaviour {
     float deltaX;
     int magicConstant = 53;
 
+    bool enemyTurn;
+
 
     Chunk[][] map;
 
     Chunk chosenChunk;
-    int chx;
-    int chy;
+    PointXY chosenPoint;
     bool move = false;
+    bool attack = false;
 
     float dx;
     float dy;
@@ -26,6 +28,10 @@ public class BattleSceneControl : MonoBehaviour {
 
     GameObject[] playerUnitsGO;
     Unit[] playerUnits;
+
+    GameObject[] enemyUnitsGO;
+    Unit[] enemyUnits;
+
     float[][] dist;
     bool[][] flags;
 
@@ -59,8 +65,25 @@ public class BattleSceneControl : MonoBehaviour {
         return Mathf.Sqrt((a - c) * (a - c) + (b - d) * (b - d));
     }
 
-    void Dijkstra(int a, int b)
+    void DealDamage(Damage dmg, int x, int y)
     {
+        if (!map[x][y].obj.isEmpty())
+        {
+            map[x][y].obj.DealDamage(dmg);
+            if (map[x][y].obj.id == 0)
+            {
+                chunks[x][y].GetComponent<SpriteActive>().setIdActive(1, false);
+            }
+        }
+        if (!map[x][y].movebleObject.isEmpty())
+        {
+            map[x][y].movebleObject.DealDamage(dmg);
+        }
+    }
+
+    void Dijkstra(PointXY p1)
+    {
+        PointXY p = new PointXY(p1);
         int INF = 10000000;
         int n = 6;
         int k = 6;
@@ -74,26 +97,26 @@ public class BattleSceneControl : MonoBehaviour {
             }
         }
 
-        dist[a][b] = 0;
+        dist[p.x][p.y] = 0;
         int step = 0;
-        while ((dist[a][b] < INF - 1) && (step < 50))
+        while ((dist[p.x][p.y] < INF - 1) && (step < 50))
         {
             step++;
-           // Debug.Log(dist[a][b]);
+           // Dep.yug.Log(dist[p.x][p.y]);
             for(int i = -1; i <= 1; i++)
             {
                 for(int j = -1; j <= 1; j++)
                 {
-                   // Debug.Log(Valid(a + i, b + j));
-                    if (Valid(a + i, b + j) && (dist[a + i][b + j] > dist[a][b] + Len(a, b, a + i, b + j)))
+                   // Dep.yug.Log(Vp.xlid(p.x + i, p.y + j));
+                    if (Valid(p.x + i, p.y + j) && (dist[p.x + i][p.y + j] > dist[p.x][p.y] + Len(p.x, p.y, p.x + i, p.y + j)))
                     {
 
-                        dist[a + i][b + j] = dist[a][b] + Len(a, b, a + i, b + j);
+                        dist[p.x + i][p.y + j] = dist[p.x][p.y] + Len(p.x, p.y, p.x + i, p.y + j);
                     }
                 }
             }
 
-            flags[a][b] = true;
+            flags[p.x][p.y] = true;
 
             float min = INF;
             for(int i = 0; i < 6; i++)
@@ -102,8 +125,8 @@ public class BattleSceneControl : MonoBehaviour {
                 {
                     if ((dist[i][j] < min) && (!flags[i][j]))
                     {
-                        a = i;
-                        b = j;
+                        p.x = i;
+                        p.y = j;
                         min = dist[i][j];
                     }
                 }
@@ -114,8 +137,35 @@ public class BattleSceneControl : MonoBehaviour {
 
     }
 
+    void GenerateEnemies()
+    {
+
+        enemyUnits = new Unit[3];
+        enemyUnitsGO = new GameObject[3];
+
+        for (int i = 0; i < 3; i++)
+        {
+            int a = Random.Range(0, 6);
+            int b = Random.Range(0, 6);
+            while (!map[a][b].obj.isEmpty() || !map[a][b].movebleObject.isEmpty())
+            {
+                a = Random.Range(0, 6);
+                b = Random.Range(0, 6);
+            }
+            enemyUnits[i] = new Unit(a, b, false);
+            Transform tr = this.gameObject.transform;
+            enemyUnitsGO[i] = (GameObject)GameObject.Instantiate(humanGO, tr);
+            enemyUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * a, tr.position.y - dx / 2 - dx + dx * b, tr.position.z);
+            float scale = enemyUnitsGO[i].transform.localScale.x * Screen.width / 6 / 2 * (float)0.785 * (53 / dx);
+            enemyUnitsGO[i].transform.localScale = new Vector3(scale, scale, scale);
+            map[a][b].movebleObject = enemyUnits[i].unit;
+            //Debug.Log(1);
+        }
+    }
+
     // Use this for initialization
     void Start () {
+        enemyTurn = false;
         n = 6;
         k = 8;
         dx = Screen.width / n;
@@ -149,7 +199,8 @@ public class BattleSceneControl : MonoBehaviour {
                 Transform tr = this.gameObject.transform;
                 chunks[i][j] = (GameObject) GameObject.Instantiate(chunkPrefab, tr);
                 chunks[i][j].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * i, tr.position.y - dx / 2 - dx + dx * j, tr.position.z);
-                float scale = chunks[i][j].transform.localScale.x * Screen.width / 6 / 2 * (float)0.74;
+                //Debug.Log(dx);
+                float scale = chunks[i][j].transform.localScale.x * Screen.width / 6 / 2 * (float)0.785 * (53/dx);
                 chunks[i][j].transform.localScale = new Vector3(scale, scale, scale);
                 chunks[i][j].GetComponent<SpriteActive>().setIdActive(1, false);
             }
@@ -179,162 +230,341 @@ public class BattleSceneControl : MonoBehaviour {
             Transform tr = this.gameObject.transform;
             playerUnitsGO[i] = (GameObject) GameObject.Instantiate(humanGO, tr);
             playerUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * a, tr.position.y - dx / 2 - dx + dx * b, tr.position.z);
-            float scale = playerUnitsGO[i].transform.localScale.x * Screen.width / 6 / 2 * (float)0.74;
+            float scale = playerUnitsGO[i].transform.localScale.x * Screen.width / 6 / 2 * (float)0.785 * (53 / dx);
             playerUnitsGO[i].transform.localScale = new Vector3(scale, scale, scale);
             map[a][b].movebleObject = playerUnits[i].unit;
         }
+
+        GenerateEnemies();
+
         chosenChunk = map[0][0];
     }
+
+    
 	
 	// Update is called once per frame
 	void Update () {
-	
+	    for(int i = 0; i < 3; i++)
+        {
+            if (playerUnits[i].unit.id == 0)
+            {
+                playerUnitsGO[i].active = false;
+            }
+            if (enemyUnits[i].unit.id == 0)
+            {
+                enemyUnitsGO[i].active = false;
+            }
+        }
+
+        if (enemyTurn)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                if (enemyUnits[i].unit.id != 0)
+                {
+                    Dijkstra(enemyUnits[i].point);
+                    Debug.Log(enemyUnits[i]);
+                    bool tf = false;
+                    Unit targetUnit = new Unit();
+                    for(int j = 0; j < 3; j++)
+                    {
+                        if ((Mathf.Abs(playerUnits[j].point.x - enemyUnits[i].point.x) <= 1) && (Mathf.Abs(playerUnits[j].point.y - enemyUnits[i].point.y) <= 1))
+                        {
+                            tf = true;
+                            targetUnit = playerUnits[j];
+                        }
+                    }
+                    if (tf)
+                    {
+                        enemyUnits[i].unit.curAP = 0;
+                        targetUnit.unit.DealDamage(enemyUnits[i].unit.damage);
+                    }
+                    else
+                    {
+                        PointXY p = new PointXY(1, 1);
+                        int cost = 1000;
+                        for(int j = 0; j < 6; j++)
+                        {
+                            for(int k = 0; k < 6; k++)
+                            {
+                                for (int r = 0; r < 3; r++)
+                                {
+                                    if ((map[j][k].movebleObject.isEmpty()) && (map[j][k].obj.isEmpty()) && ((Mathf.Abs(playerUnits[r].point.x - j) <= 1) && (Mathf.Abs(playerUnits[r].point.y - k)) <= 1))
+                                    {
+                                        if (!tf)
+                                        {
+                                            tf = true;
+                                            p = new PointXY(j, k);
+                                            targetUnit = playerUnits[r];
+                                            cost = Mathf.CeilToInt(dist[j][k] / enemyUnits[i].unit.speed);
+                                        }
+                                        else
+                                        {
+                                            if (Mathf.CeilToInt(dist[j][k] / enemyUnits[i].unit.speed) < cost)
+                                            {
+                                                tf = true;
+                                                targetUnit = playerUnits[r];
+                                                cost = Mathf.CeilToInt(dist[j][k] / enemyUnits[i].unit.speed);
+                                                p = new PointXY(j, k);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Debug.Log(p.x.ToString() + " " + p.y.ToString());
+                        if (tf)
+                        {
+                            enemyUnits[i].unit.doAction(cost);
+                            //chunks[p.x][p.y].GetComponent<SpriteActive>().setIdActive(0, false);
+                            Swap(enemyUnits[i].point, p, false);
+                            if (enemyUnits[i].unit.curAP > 0)
+                            {
+                                targetUnit.unit.DealDamage(enemyUnits[i].unit.damage);
+                                enemyUnits[i].unit.curAP = 0;
+                            }
+                        }
+                        else
+                        {
+                            enemyUnits[i].unit.curAP = 0;
+                        }
+                    }
+                }
+            }
+            enemyTurn = false;
+        }
+
 	}
 
-    Unit GetUnit(int a, int b)
+    Unit GetUnit(PointXY p)
     {
         Unit un = playerUnits[0];
         for(int i = 0; i < 3; i++)
         {
-            if ((playerUnits[i].x == a) && (playerUnits[i].y == b))
+            if ((playerUnits[i].point.x == p.x) && (playerUnits[i].point.y == p.y))
             {
                 un = playerUnits[i];
+                break;
+            }
+        }
+        for (int i = 0; i < 3; i++)
+        {
+            if ((enemyUnits[i].point.x == p.x) && (enemyUnits[i].point.y == p.y))
+            {
+                un = enemyUnits[i];
                 break;
             }
         }
         return un;
     }
 
-    void Swap(int a, int b, int x, int y)
+    void Swap(PointXY p1, PointXY p2, bool tf)
     {
-        Unit playerUnit = GetUnit(a, b);
-        playerUnit.x = x;
-        playerUnit.y = y;
-        map[a][b].movebleObject = map[x][y].movebleObject;
-        map[x][y].movebleObject = playerUnit.unit;
+        Unit playerUnit = GetUnit(p1);
+        playerUnit.point = new PointXY(p2);
+        map[p1.x][p1.y].movebleObject = map[p2.x][p2.y].movebleObject;
+        map[p2.x][p2.y].movebleObject = playerUnit.unit;
 
-        for(int i = 0; i < 3; i++)
+       // Debug.Log(p2.x.ToString() + " " + p2.y.ToString());
+
+        if (tf)
         {
-            Transform tr = this.gameObject.transform;
-          //  Debug.Log(playerUnits[i].x);
-            playerUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * playerUnits[i].x, tr.position.y - dx / 2 - dx + dx * playerUnits[i].y, tr.position.z);
+            for (int i = 0; i < 3; i++)
+            {
+                Transform tr = this.gameObject.transform;
+                //  Debug.Log(playerUnits[i].x);
+                playerUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * playerUnits[i].point.x, tr.position.y - dx / 2 - dx + dx * playerUnits[i].point.y, tr.position.z);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                Transform tr = this.gameObject.transform;
+                //  Debug.Log(playerUnits[i].x);
+                enemyUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * enemyUnits[i].point.x, tr.position.y - dx / 2 - dx + dx * enemyUnits[i].point.y, tr.position.z);
+            }
+        }
+    }
+
+    void CheckNextTurn()
+    {
+        Unit un = playerUnits[0];
+        bool tf = true;
+        for (int i = 0; i < 3; i++)
+        {
+            if ((playerUnits[i].unit.id != 0) && (playerUnits[i].unit.curAP > 0))
+            {
+                tf = false;
+                un = playerUnits[i];
+                chosenPoint = new PointXY(playerUnits[i].point);
+            }
+        }
+        if (tf)
+        {
+            Debug.Log(tf);
+            enemyTurn = true;
+            for (int i = 0; i < 3; i++)
+            {
+                playerUnits[i].unit.calculateNewTurn();
+                enemyUnits[i].unit.calculateNewTurn();
+            }
+            chosenPoint = new PointXY(playerUnits[0].point);
         }
     }
 
     void OnGUI()
     {
-        for (int i = 0; i < 6; i++)
+        if (!enemyTurn)
         {
-            for (int j = 0; j < 6; j++)
+            for (int i = 0; i < 6; i++)
             {
-                string s;
-                if ((!move) || (dist[i][5 - j] > GetUnit(chx, chy).unit.curAP * GetUnit(chx, chy).unit.speed) || (dist[i][5 - j] == 0))
+                for (int j = 0; j < 6; j++)
                 {
-                    s = "";
-                }
-                else
-                {
-                    int k;
-                    for(k = 0; k <= GetUnit(chx, chy).unit.curAP; k++)
+                    string s;
+                    if ((!move) || (dist[i][5 - j] == 0))
                     {
-                        if (dist[i][5 - j] < k * GetUnit(chx, chy).unit.speed)
+                        s = "";
+                    }
+                    else
+                    {
+                        int k = Mathf.CeilToInt(dist[i][5 - j] / GetUnit(chosenPoint).unit.speed);
+                        if (k > GetUnit(chosenPoint).unit.curAP)
                         {
-                            break;
+                            s = "";
+                        }
+                        else
+                        {
+                            s = (k).ToString();
                         }
                     }
-                    s = (k - 1).ToString();
-                }
-                if (GUI.Button(new Rect(i * dx + deltaX, j * dy, dx, dy), s , coverButtonStyle))
-                {
-                    if (!move)
+                    if (GUI.Button(new Rect(i * dx + deltaX, j * dy, dx, dy), s, coverButtonStyle))
                     {
-                        chosenChunk = map[i][5 - j];
-                        chx = i;
-                        chy = 5 - j;
-                    }
-                    else
-                    {
-                        if (map[i][5 - j].obj.isEmpty() && map[i][5 - j].movebleObject.isEmpty() && (GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed >= dist[i][5 - j]))
+                        if (!move && !attack)
                         {
-                            Swap(chx, chy, i, 5 - j);
-                            chx = i;
-                            chy = 5 - j;
+                            chosenChunk = map[i][5 - j];
+                            chosenPoint = new PointXY(i, 5 - j);
                         }
-                        move = false;
-                        // Debug.Log(dist[i][5 - j]);
+                        else
+                        {
+                            if (move)
+                            {
+                                if (map[i][5 - j].obj.isEmpty() && map[i][5 - j].movebleObject.isEmpty() && (GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed >= dist[i][5 - j]))
+                                {
+                                    int k = Mathf.CeilToInt(dist[i][5 - j] / GetUnit(chosenPoint).unit.speed);
+                                    GetUnit(chosenPoint).unit.doAction(k);
+                                    Swap(chosenPoint, new PointXY(i, 5 - j), true);
+                                    chosenPoint = new PointXY(i, 5 - j);
+                                    if (GetUnit(chosenPoint).unit.curAP == 0)
+                                    {
+                                        CheckNextTurn();
+                                    }
+                                }
+                                move = false;
+                            }
+                            if (attack)
+                            {
+                                if ((GetUnit(chosenPoint).unit.curAP > 0) && (Mathf.Abs(chosenPoint.x - i) <= 1) && (Mathf.Abs(chosenPoint.y - (5 - j)) <= 1) && ((!map[i][5 - j].obj.isEmpty()) || (!map[i][5 - j].movebleObject.isEmpty() && !map[i][5 - j].movebleObject.player)))
+                                {
+                                    DealDamage(GetUnit(chosenPoint).unit.damage, i, 5 - j);
+                                    GetUnit(chosenPoint).unit.curAP = 0;
+                                    CheckNextTurn();
+                                }
+                                attack = false;
+                            }
+                        }
                     }
-                }
-                if (move && (dist[i][5 - j] <= GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed))
-                {
-                    if (!Valid(i - 1, 5 - j) || (dist[i - 1][5 - j] > GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed))
+                    if (move && (dist[i][5 - j] <= GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
                     {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, true);
-                    }
-                    else
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, false);
-                    }
-                    if (!Valid(i + 1, 5 - j) || (dist[i + 1][5 - j] > GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed))
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, true);
-                    }
-                    else
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, false);
-                    }
-                    if (!Valid(i, 5 - j - 1) || (dist[i][5 - j - 1] > GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed))
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, true);
-                    }
-                    else
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, false);
-                    }
-                    if (!Valid(i, 5 - j + 1) || (dist[i][5 - j + 1] > GetUnit(chx, chy ).unit.curAP * GetUnit(chx, chy).unit.speed))
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, true);
+                        if (!Valid(i - 1, 5 - j) || (dist[i - 1][5 - j] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
+                        {
+                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, true);
+                        }
+                        else
+                        {
+                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, false);
+                        }
+                        if (!Valid(i + 1, 5 - j) || (dist[i + 1][5 - j] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
+                        {
+                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, true);
+                        }
+                        else
+                        {
+                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, false);
+                        }
+                        if (!Valid(i, 5 - j - 1) || (dist[i][5 - j - 1] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
+                        {
+                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, true);
+                        }
+                        else
+                        {
+                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, false);
+                        }
+                        if (!Valid(i, 5 - j + 1) || (dist[i][5 - j + 1] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
+                        {
+                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, true);
+                        }
+                        else
+                        {
+                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, false);
+                        }
                     }
                     else
                     {
                         chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, false);
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, false);
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, false);
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, false);
                     }
-                }
-                else
-                {
-                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, false);
-                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, false);
-                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, false);
-                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, false);
-                }
-            }
-        }
-        if (chosenChunk != null)
-        {
-            if (chosenChunk.movebleObject.id != 0)
-            {
-                if (GUI.Button(new Rect(Screen.width / 3, dy * 6, Screen.width / 6, dy), "Move"))
-                {
-                    move = !move;
-                    if (move)
+                    if (!map[i][5 - j].movebleObject.isEmpty() && (map[i][5 - j].movebleObject.player))
                     {
-                        Dijkstra(chx, chy);
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-6, true);
+                    }
+                    else
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-6, false);
+                    }
+                    if (attack && (Mathf.Abs(chosenPoint.x - i) <= 1) && (Mathf.Abs(chosenPoint.y - (5 - j)) <= 1) && ((!map[i][5 - j].obj.isEmpty()) || (!map[i][5 - j].movebleObject.isEmpty() && !map[i][5 - j].movebleObject.player)))
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-5, true);
+                    }
+                    else
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-5, false);
                     }
                 }
-                if (GUI.Button(new Rect(Screen.width / 3, dy * 7, Screen.width / 6, dy), "Attack"))
+            }
+            if (chosenChunk != null)
+            {
+                if (chosenChunk.movebleObject.id != 0)
                 {
-
+                    if (GUI.Button(new Rect(Screen.width / 3 - dx, dy * 6, Screen.width / 6, dy), "Move"))
+                    {
+                        move = !move;
+                        if (move)
+                        {
+                            Dijkstra(chosenPoint);
+                        }
+                    }
+                    if (GUI.Button(new Rect(Screen.width / 3 - dx, dy * 7, Screen.width / 6, dy), "Attack"))
+                    {
+                        attack = !attack;
+                    }
                 }
-            }
-            GUI.Label(new Rect(0, dy * 6, Screen.width / 3, dy * 2), chosenChunk.landCover);
-            if (chosenChunk.obj.id != 0)
-            {
-                GUI.Label(new Rect(0, dy * 6 + dx * 2 / 3, Screen.width / 3, dy * 2), chosenChunk.obj.name + " " + chosenChunk.obj.curHits + "/" + chosenChunk.obj.maxHits);
-            }
-            if (chosenChunk.movebleObject.id != 0)
-            {
-                GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 2, Screen.width / 3, dy * 2), chosenChunk.movebleObject.name);
-                GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 3, Screen.width / 3, dy * 2), "Hits " + chosenChunk.movebleObject.curHits + "/" + chosenChunk.movebleObject.maxHits + " AP " + chosenChunk.movebleObject.curAP + "/" + chosenChunk.movebleObject.maxAP);
-                GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 4, Screen.width / 3, dy * 2), "Damage " + chosenChunk.movebleObject.damage.damage + " Armor " + chosenChunk.movebleObject.armour.armour);
+                GUI.Label(new Rect(0, dy * 6, Screen.width / 3, dy * 2), chosenChunk.landCover);
+                if (chosenChunk.obj.id != 0)
+                {
+                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 3, Screen.width / 3, dy * 2), chosenChunk.obj.name);
+                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 3 + dx * 2 / 6, Screen.width / 3, dy * 2), "Hits " + chosenChunk.obj.curHits + "/" + chosenChunk.obj.maxHits);
+                }
+                if (chosenChunk.movebleObject.id != 0)
+                {
+                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6, Screen.width / 3, dy * 2), chosenChunk.movebleObject.name);
+                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 2, Screen.width / 3, dy * 2), "Hits " + chosenChunk.movebleObject.curHits + "/" + chosenChunk.movebleObject.maxHits);
+                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 3, Screen.width / 3, dy * 2), "AP " + chosenChunk.movebleObject.curAP + "/" + chosenChunk.movebleObject.maxAP);
+                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 4, Screen.width / 3, dy * 2), "Damage " + chosenChunk.movebleObject.damage.damage);
+                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 5, Screen.width / 3, dy * 2), "Armor " + chosenChunk.movebleObject.armour.armour);
+                }
             }
         }
     }

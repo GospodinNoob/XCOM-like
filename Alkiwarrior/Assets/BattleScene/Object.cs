@@ -22,6 +22,16 @@ public class Object{
         }
     }
 
+    public void DealDamage(Damage dmg)
+    {
+        Damage reducedDamage = new Damage(dmg, this.armour);
+        this.curHits -= Mathf.Max(0, reducedDamage.Sum());
+        if (this.curHits <= 0)
+        {
+            this.id = 0;
+        }
+    }
+
     public void Generate(int a)
     {
         this.id = a;

@@ -15,6 +15,16 @@ public class Damage{
         this.damage = 0;
     }
 
+    public Damage (Damage dmg, Armour arm)
+    {
+        this.damage = dmg.damage - arm.armour;
+    }
+
+    public int Sum()
+    {
+        return this.damage;
+    }
+
     public void Clear()
     {
         this.damage = 0;
