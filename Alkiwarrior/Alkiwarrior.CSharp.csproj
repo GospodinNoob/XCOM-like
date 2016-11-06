@@ -73,6 +73,7 @@
     <Compile Include="Assets\BattleScene\PointXY.cs" />
     <Compile Include="Assets\BattleScene\SpriteActive.cs" />
     <Compile Include="Assets\BattleScene\Unit.cs" />
+    <Compile Include="Assets\BattleScene\UnitMove.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\SyntaxTree\UnityVS\2015\UnityVS.CSharp.targets" />
 </Project>

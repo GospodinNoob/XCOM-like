@@ -11,6 +11,8 @@ public class BattleSceneControl : MonoBehaviour {
     float deltaX;
     int magicConstant = 53;
 
+    ArrayList way;
+
     bool enemyTurn;
 
 
@@ -33,6 +35,7 @@ public class BattleSceneControl : MonoBehaviour {
     Unit[] enemyUnits;
 
     float[][] dist;
+    PointXY[][] parents;
     bool[][] flags;
 
     bool Valid(int a, int b)
@@ -112,6 +115,8 @@ public class BattleSceneControl : MonoBehaviour {
                     {
 
                         dist[p.x + i][p.y + j] = dist[p.x][p.y] + Len(p.x, p.y, p.x + i, p.y + j);
+                        //Debug.Log(p.x + " " + p.y);
+                        parents[p.x + i][p.y + j] = new PointXY(p);
                     }
                 }
             }
@@ -183,6 +188,7 @@ public class BattleSceneControl : MonoBehaviour {
         deltaX /= 2;
 
         dist = new float[6][];
+        parents = new PointXY[6][];
         flags = new bool[6][];
         map = new Chunk[6][];
         chunks = new GameObject[6][];
@@ -190,6 +196,7 @@ public class BattleSceneControl : MonoBehaviour {
         {
             map[i] = new Chunk[6];
             dist[i] = new float[6];
+            parents[i] = new PointXY[6];
             flags[i] = new bool[6];
             chunks[i] = new GameObject[6];
             for(int j = 0; j < 6; j++)
@@ -200,7 +207,7 @@ public class BattleSceneControl : MonoBehaviour {
                 chunks[i][j] = (GameObject) GameObject.Instantiate(chunkPrefab, tr);
                 chunks[i][j].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * i, tr.position.y - dx / 2 - dx + dx * j, tr.position.z);
                 //Debug.Log(dx);
-                float scale = chunks[i][j].transform.localScale.x * Screen.width / 6 / 2 * (float)0.785 * (53/dx);
+                float scale = chunks[i][j].transform.localScale.x * Screen.width / 6 / 2 * (float)0.787 * (53/dx);
                 chunks[i][j].transform.localScale = new Vector3(scale, scale, scale);
                 chunks[i][j].GetComponent<SpriteActive>().setIdActive(1, false);
             }
@@ -230,7 +237,7 @@ public class BattleSceneControl : MonoBehaviour {
             Transform tr = this.gameObject.transform;
             playerUnitsGO[i] = (GameObject) GameObject.Instantiate(humanGO, tr);
             playerUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * a, tr.position.y - dx / 2 - dx + dx * b, tr.position.z);
-            float scale = playerUnitsGO[i].transform.localScale.x * Screen.width / 6 / 2 * (float)0.785 * (53 / dx);
+            float scale = playerUnitsGO[i].transform.localScale.x * Screen.width / 6 / 2 * (float)0.787 * (53 / dx);
             playerUnitsGO[i].transform.localScale = new Vector3(scale, scale, scale);
             map[a][b].movebleObject = playerUnits[i].unit;
         }
@@ -238,7 +245,10 @@ public class BattleSceneControl : MonoBehaviour {
         GenerateEnemies();
 
         chosenChunk = map[0][0];
+        this.gameObject.GetComponent<UnitMove>().SetDx(dx);
     }
+
+    int enemyUnitNow;
 
     
 	
@@ -256,83 +266,86 @@ public class BattleSceneControl : MonoBehaviour {
             }
         }
 
-        if (enemyTurn)
+        if (enemyTurn && !block)
         {
-            for (int i = 0; i < 3; i++)
+            int i = enemyUnitNow;
+            if (enemyUnits[i].unit.id != 0)
             {
-                if (enemyUnits[i].unit.id != 0)
+                Dijkstra(enemyUnits[i].point);
+                Debug.Log(enemyUnits[i]);
+                bool tf = false;
+                Unit targetUnit = new Unit();
+                for (int j = 0; j < 3; j++)
                 {
-                    Dijkstra(enemyUnits[i].point);
-                    Debug.Log(enemyUnits[i]);
-                    bool tf = false;
-                    Unit targetUnit = new Unit();
-                    for(int j = 0; j < 3; j++)
+                    if ((Mathf.Abs(playerUnits[j].point.x - enemyUnits[i].point.x) <= 1) && (Mathf.Abs(playerUnits[j].point.y - enemyUnits[i].point.y) <= 1))
                     {
-                        if ((Mathf.Abs(playerUnits[j].point.x - enemyUnits[i].point.x) <= 1) && (Mathf.Abs(playerUnits[j].point.y - enemyUnits[i].point.y) <= 1))
-                        {
-                            tf = true;
-                            targetUnit = playerUnits[j];
-                        }
+                        tf = true;
+                        targetUnit = playerUnits[j];
                     }
-                    if (tf)
+                }
+                if (tf)
+                {
+                    enemyUnits[i].unit.curAP = 0;
+                    targetUnit.unit.DealDamage(enemyUnits[i].unit.damage);
+                }
+                else
+                {
+                    PointXY p = new PointXY(1, 1);
+                    int cost = 1000;
+                    for (int j = 0; j < 6; j++)
                     {
-                        enemyUnits[i].unit.curAP = 0;
-                        targetUnit.unit.DealDamage(enemyUnits[i].unit.damage);
-                    }
-                    else
-                    {
-                        PointXY p = new PointXY(1, 1);
-                        int cost = 1000;
-                        for(int j = 0; j < 6; j++)
+                        for (int k = 0; k < 6; k++)
                         {
-                            for(int k = 0; k < 6; k++)
+                            for (int r = 0; r < 3; r++)
                             {
-                                for (int r = 0; r < 3; r++)
+                                if ((map[j][k].movebleObject.isEmpty()) && (map[j][k].obj.isEmpty()) && ((Mathf.Abs(playerUnits[r].point.x - j) <= 1) && (Mathf.Abs(playerUnits[r].point.y - k)) <= 1))
                                 {
-                                    if ((map[j][k].movebleObject.isEmpty()) && (map[j][k].obj.isEmpty()) && ((Mathf.Abs(playerUnits[r].point.x - j) <= 1) && (Mathf.Abs(playerUnits[r].point.y - k)) <= 1))
+                                    if (!tf)
                                     {
-                                        if (!tf)
+                                        tf = true;
+                                        p = new PointXY(j, k);
+                                        targetUnit = playerUnits[r];
+                                        cost = Mathf.CeilToInt(dist[j][k] / enemyUnits[i].unit.speed);
+                                    }
+                                    else
+                                    {
+                                        if (Mathf.CeilToInt(dist[j][k] / enemyUnits[i].unit.speed) < cost)
                                         {
                                             tf = true;
-                                            p = new PointXY(j, k);
                                             targetUnit = playerUnits[r];
                                             cost = Mathf.CeilToInt(dist[j][k] / enemyUnits[i].unit.speed);
-                                        }
-                                        else
-                                        {
-                                            if (Mathf.CeilToInt(dist[j][k] / enemyUnits[i].unit.speed) < cost)
-                                            {
-                                                tf = true;
-                                                targetUnit = playerUnits[r];
-                                                cost = Mathf.CeilToInt(dist[j][k] / enemyUnits[i].unit.speed);
-                                                p = new PointXY(j, k);
-                                            }
+                                            p = new PointXY(j, k);
                                         }
                                     }
                                 }
                             }
                         }
-                        Debug.Log(p.x.ToString() + " " + p.y.ToString());
-                        if (tf)
+                    }
+                    Debug.Log(p.x.ToString() + " " + p.y.ToString());
+                    if (tf)
+                    {
+                        enemyUnits[i].unit.doAction(cost);
+                        //chunks[p.x][p.y].GetComponent<SpriteActive>().setIdActive(0, false);
+                        Swap(enemyUnits[i].point, p, false);
+                        if (enemyUnits[i].unit.curAP > 0)
                         {
-                            enemyUnits[i].unit.doAction(cost);
-                            //chunks[p.x][p.y].GetComponent<SpriteActive>().setIdActive(0, false);
-                            Swap(enemyUnits[i].point, p, false);
-                            if (enemyUnits[i].unit.curAP > 0)
-                            {
-                                targetUnit.unit.DealDamage(enemyUnits[i].unit.damage);
-                                enemyUnits[i].unit.curAP = 0;
-                            }
-                        }
-                        else
-                        {
+                            targetUnit.unit.DealDamage(enemyUnits[i].unit.damage);
                             enemyUnits[i].unit.curAP = 0;
                         }
                     }
+                    else
+                    {
+                        enemyUnits[i].unit.curAP = 0;
+                    }
                 }
             }
-            enemyTurn = false;
+            enemyUnitNow++;
+            if (enemyUnitNow == 3)
+            {
+                enemyTurn = false;
+            }
         }
+        
 
 	}
 
@@ -358,6 +371,37 @@ public class BattleSceneControl : MonoBehaviour {
         return un;
     }
 
+    ArrayList GetWay(PointXY p)
+    {
+        ArrayList newWay = new ArrayList();
+        newWay.Add(p);
+        int step = 0;
+        Debug.Log(p.x + " " + p.y + " " + dist[p.x][p.y]);
+        while (dist[p.x][p.y] > 0)
+        {
+           // step++;
+            //if (step > 50)
+            //{
+              //  break;
+            //}
+            p = parents[p.x][p.y];
+            Debug.Log(p.x + " " + p.y + " " + dist[p.x][p.y]);
+            newWay.Add(p);
+        }
+        //if (step > 50)
+        //{
+          //  Debug.Log(dist[p.x][p.y]);
+        //}
+        return newWay;
+    }
+
+    bool block = false;
+
+    public void SetBlock(bool tf)
+    {
+        block = tf;
+    }
+
     void Swap(PointXY p1, PointXY p2, bool tf)
     {
         Unit playerUnit = GetUnit(p1);
@@ -365,24 +409,106 @@ public class BattleSceneControl : MonoBehaviour {
         map[p1.x][p1.y].movebleObject = map[p2.x][p2.y].movebleObject;
         map[p2.x][p2.y].movebleObject = playerUnit.unit;
 
+        way = GetWay(p2);
+
        // Debug.Log(p2.x.ToString() + " " + p2.y.ToString());
 
         if (tf)
         {
             for (int i = 0; i < 3; i++)
             {
-                Transform tr = this.gameObject.transform;
+                if (playerUnits[i] == playerUnit)
+                {
+                    Transform tr = this.gameObject.transform;
+                    //  Debug.Log(1);
+                    block = true;
+                    this.GetComponent<UnitMove>().SetWay(playerUnitsGO[i], way);
+                }
                 //  Debug.Log(playerUnits[i].x);
-                playerUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * playerUnits[i].point.x, tr.position.y - dx / 2 - dx + dx * playerUnits[i].point.y, tr.position.z);
+                //playerUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * playerUnits[i].point.x, tr.position.y - dx / 2 - dx + dx * playerUnits[i].point.y, tr.position.z);
             }
         }
         else
         {
             for (int i = 0; i < 3; i++)
             {
-                Transform tr = this.gameObject.transform;
-                //  Debug.Log(playerUnits[i].x);
-                enemyUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * enemyUnits[i].point.x, tr.position.y - dx / 2 - dx + dx * enemyUnits[i].point.y, tr.position.z);
+                if (enemyUnits[i] == playerUnit)
+                {
+                    Transform tr = this.gameObject.transform;
+                    //  Debug.Log(playerUnits[i].x);
+                    block = true;
+                    enemyUnitNow = 0;
+                    this.GetComponent<UnitMove>().SetWay(enemyUnitsGO[i], way);
+                    //enemyUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * enemyUnits[i].point.x, tr.position.y - dx / 2 - dx + dx * enemyUnits[i].point.y, tr.position.z);
+                }
+            }
+        }
+    }
+
+    void CheckTextures()
+    {
+        for(int i = 0; i < 6; i++)
+        {
+            for(int j = 0; j < 6; j++)
+            {
+                if (move && (dist[i][5 - j] <= GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
+                {
+                    if (!Valid(i - 1, 5 - j) || (dist[i - 1][5 - j] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, true);
+                    }
+                    else
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, false);
+                    }
+                    if (!Valid(i + 1, 5 - j) || (dist[i + 1][5 - j] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, true);
+                    }
+                    else
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, false);
+                    }
+                    if (!Valid(i, 5 - j - 1) || (dist[i][5 - j - 1] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, true);
+                    }
+                    else
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, false);
+                    }
+                    if (!Valid(i, 5 - j + 1) || (dist[i][5 - j + 1] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, true);
+                    }
+                    else
+                    {
+                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, false);
+                    }
+                }
+                else
+                {
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, false);
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, false);
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, false);
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, false);
+                }
+                if (!map[i][5 - j].movebleObject.isEmpty() && (map[i][5 - j].movebleObject.player))
+                {
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-6, true);
+                }
+                else
+                {
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-6, false);
+                }
+                if (attack && (Mathf.Abs(chosenPoint.x - i) <= 1) && (Mathf.Abs(chosenPoint.y - (5 - j)) <= 1) && ((!map[i][5 - j].obj.isEmpty()) || (!map[i][5 - j].movebleObject.isEmpty() && !map[i][5 - j].movebleObject.player)))
+                {
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-5, true);
+                }
+                else
+                {
+                    chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-5, false);
+                }
             }
         }
     }
@@ -415,7 +541,7 @@ public class BattleSceneControl : MonoBehaviour {
 
     void OnGUI()
     {
-        if (!enemyTurn)
+        if ((!enemyTurn) && (!block))
         {
             for (int i = 0; i < 6; i++)
             {
@@ -436,6 +562,7 @@ public class BattleSceneControl : MonoBehaviour {
                         else
                         {
                             s = (k).ToString();
+                            //s = parents[i][5 - j].x.ToString() + parents[i][5 - j].y.ToString();
                         }
                     }
                     if (GUI.Button(new Rect(i * dx + deltaX, j * dy, dx, dy), s, coverButtonStyle))
@@ -474,69 +601,12 @@ public class BattleSceneControl : MonoBehaviour {
                             }
                         }
                     }
-                    if (move && (dist[i][5 - j] <= GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
-                    {
-                        if (!Valid(i - 1, 5 - j) || (dist[i - 1][5 - j] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
-                        {
-                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, true);
-                        }
-                        else
-                        {
-                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, false);
-                        }
-                        if (!Valid(i + 1, 5 - j) || (dist[i + 1][5 - j] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
-                        {
-                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, true);
-                        }
-                        else
-                        {
-                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, false);
-                        }
-                        if (!Valid(i, 5 - j - 1) || (dist[i][5 - j - 1] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
-                        {
-                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, true);
-                        }
-                        else
-                        {
-                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, false);
-                        }
-                        if (!Valid(i, 5 - j + 1) || (dist[i][5 - j + 1] > GetUnit(chosenPoint).unit.curAP * GetUnit(chosenPoint).unit.speed))
-                        {
-                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, true);
-                        }
-                        else
-                        {
-                            chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, false);
-                        }
-                    }
-                    else
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-1, false);
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-2, false);
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-3, false);
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-4, false);
-                    }
-                    if (!map[i][5 - j].movebleObject.isEmpty() && (map[i][5 - j].movebleObject.player))
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-6, true);
-                    }
-                    else
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-6, false);
-                    }
-                    if (attack && (Mathf.Abs(chosenPoint.x - i) <= 1) && (Mathf.Abs(chosenPoint.y - (5 - j)) <= 1) && ((!map[i][5 - j].obj.isEmpty()) || (!map[i][5 - j].movebleObject.isEmpty() && !map[i][5 - j].movebleObject.player)))
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-5, true);
-                    }
-                    else
-                    {
-                        chunks[i][5 - j].GetComponent<SpriteActive>().setIdActive(-5, false);
-                    }
                 }
             }
+            CheckTextures();
             if (chosenChunk != null)
             {
-                if (chosenChunk.movebleObject.id != 0)
+                if ((chosenChunk.movebleObject.id != 0) && (chosenChunk.movebleObject.player))
                 {
                     if (GUI.Button(new Rect(Screen.width / 3 - dx, dy * 6, Screen.width / 6, dy), "Move"))
                     {
