@@ -24,6 +24,53 @@ public class UnitMove : MonoBehaviour {
         dx = a;
     }
 
+    void Rotation(int vx, int vy)
+    {
+        int angle = 0;
+        if (vx == 1)
+        {
+            if (vy == 1)
+            {
+                angle = 180 + 45;
+            }
+            if (vy == 0)
+            {
+                angle = 180;
+            }
+            if (vy == -1)
+            {
+                angle = 180 - 45;
+            }
+        }
+        if (vx == 0)
+        {
+            if (vy == 1)
+            {
+                angle = 360 - 90;
+            }
+            if (vy == -1)
+            {
+                angle = 90;
+            }
+        }
+        if (vx == -1)
+        {
+            if (vy == 1)
+            {
+                angle = 90 - (45 + 90);
+            }
+            if (vy == 0)
+            {
+                angle = 0;
+            }
+            if (vy == -1)
+            {
+                angle = 45;
+            }
+        }
+        unit.gameObject.transform.rotation = Quaternion.Euler(0, 0, angle - 90);
+    }
+
     public void SetWay(GameObject go, ArrayList way)
     {
         newWay = new ArrayList();
@@ -55,6 +102,7 @@ public class UnitMove : MonoBehaviour {
                 if (Time.time - timer > len)
                 {
                     Transform tr = this.gameObject.transform;
+                    Rotation(b.x - a.x, b.y - a.y);
                     len = Mathf.Sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
                     unit.gameObject.transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * a.x, tr.position.y - dx / 2 - dx + dx * a.y, tr.position.z);
                     segment++;
