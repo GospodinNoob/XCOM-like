@@ -39,7 +39,18 @@ public class MovebleObject{
        // Debug.Log(this.speed);
         this.curAP = this.maxAP;
         this.curHits = this.maxHits;
-        this.name = "Human";
+        this.name = "H" + Random.Range(1, 100).ToString();
+    }
+
+    public void Save(string s)
+    {
+        PlayerPrefs.SetInt(s + "_maxHits", this.maxHits);
+        PlayerPrefs.SetInt(s + "_id", this.id);
+        PlayerPrefs.SetInt(s + "_maxAP", this.maxAP);
+        PlayerPrefs.SetString(s + "_name", this.name);
+        PlayerPrefs.SetFloat(s + "_speed", this.speed);
+        this.damage.Save(s);
+        this.armour.Save(s);
     }
 
     public void DealDamage(Damage dmg)
@@ -56,6 +67,20 @@ public class MovebleObject{
     {
         this.player = pl;
         this.Generate(a);
+    }
+
+    public MovebleObject(string s)
+    {
+        this.id = PlayerPrefs.GetInt(s + "_id");
+        this.maxAP = PlayerPrefs.GetInt(s + "_maxAP");
+        this.maxHits = PlayerPrefs.GetInt(s + "_maxHits");
+        this.curAP = this.maxAP;
+        this.curHits = this.maxHits;
+        this.player = true;
+        this.damage = new Damage(s);
+        this.armour = new Armour(s);
+        this.speed = PlayerPrefs.GetFloat(s + "_speed");
+        this.name = PlayerPrefs.GetString(s + "_name");
     }
 
     public MovebleObject()

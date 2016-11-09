@@ -15,6 +15,14 @@ public class Unit
         //this.unit.Generate(1);
     }
 
+    public Unit(int a, int b, string s, bool tf)
+    {
+        this.point = new PointXY(a, b);
+        this.rotation = 0;
+        this.unit = new MovebleObject(s);
+        //this.unit.Generate(1);
+    }
+
     public Unit()
     {
         
@@ -23,5 +31,8 @@ public class Unit
     public Unit(PointXY p, bool tf)
     {
         this.point = new PointXY(p);
+        this.rotation = 0;
+        this.unit = new MovebleObject(1, tf);
     }
+
 }

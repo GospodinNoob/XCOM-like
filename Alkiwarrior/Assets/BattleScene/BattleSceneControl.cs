@@ -10,6 +10,10 @@ public class BattleSceneControl : MonoBehaviour {
     float deltaX;
     int magicConstant = 53;
 
+    int maxPlayerUnits;
+    int maxEnemyUnits;
+
+
     ArrayList way;
 
     bool enemyTurn;
@@ -191,10 +195,10 @@ public class BattleSceneControl : MonoBehaviour {
     void GenerateEnemies()
     {
 
-        enemyUnits = new Unit[3];
-        enemyUnitsGO = new GameObject[3];
+        enemyUnits = new Unit[maxEnemyUnits];
+        enemyUnitsGO = new GameObject[maxEnemyUnits];
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < maxEnemyUnits; i++)
         {
             int a = Random.Range(0, 6);
             int b = Random.Range(0, 6);
@@ -217,6 +221,8 @@ public class BattleSceneControl : MonoBehaviour {
     // Use this for initialization
     void Start () {
         enemyTurn = false;
+        maxPlayerUnits = PlayerPrefs.GetInt("PlayerTeamCounter");
+        maxEnemyUnits = PlayerPrefs.GetInt("MissionDifficultly");
         n = 6;
         k = 8;
         dx = Screen.width / n;
@@ -267,10 +273,10 @@ public class BattleSceneControl : MonoBehaviour {
             chunks[a][b].GetComponent<SpriteActive>().setIdActive(1, true);
         }
 
-        playerUnits = new Unit[3];
-        playerUnitsGO = new GameObject[3];
+        playerUnits = new Unit[maxPlayerUnits];
+        playerUnitsGO = new GameObject[maxPlayerUnits];
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < maxPlayerUnits; i++)
         {
             int a = Random.Range(0, 6);
             int b = Random.Range(0, 6);
@@ -279,7 +285,7 @@ public class BattleSceneControl : MonoBehaviour {
                 a = Random.Range(0, 6);
                 b = Random.Range(0, 6);
             }
-            playerUnits[i] = new Unit(a, b, true);
+            playerUnits[i] = new Unit(a, b, "PlayerUnit" + i.ToString(), true);
             Transform tr = this.gameObject.transform;
             playerUnitsGO[i] = (GameObject) GameObject.Instantiate(humanGO, tr);
             playerUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * a, tr.position.y - dx / 2 - dx + dx * b, tr.position.z);
@@ -296,33 +302,54 @@ public class BattleSceneControl : MonoBehaviour {
 
     int enemyUnitNow;
 
+    void EndGame(bool tf)
+    {
+        Application.LoadLevel("PlaningScene");
+    }
+
     
 	
 	// Update is called once per frame
 	void Update () {
-	    for(int i = 0; i < 3; i++)
+        int counter1 = 0;
+        int counter2 = 0;
+        for (int i = 0; i < maxPlayerUnits; i++)
         {
             if (playerUnits[i].unit.id == 0)
             {
                 playerUnitsGO[i].active = false;
+                counter1++;
             }
-            if (enemyUnits[i].unit.id == 0)
+        }
+        for (int i = 0; i < maxEnemyUnits; i++)
+        {
+                if (enemyUnits[i].unit.id == 0)
             {
                 enemyUnitsGO[i].active = false;
+                counter2++;
             }
+        }
+
+        if (counter1 == maxPlayerUnits)
+        {
+            EndGame(false);
+        }
+        if (counter2 == maxEnemyUnits)
+        {
+            EndGame(true);
         }
 
         if (enemyTurn && !block)
         {
             int i = enemyUnitNow;
-            Debug.Log(i);
+            //Debug.Log(i);
             if (enemyUnits[i].unit.id != 0)
             {
                 Dijkstra(enemyUnits[i].point);
                 Debug.Log(enemyUnits[i]);
                 bool tf = false;
                 Unit targetUnit = new Unit();
-                for (int j = 0; j < 3; j++)
+                for (int j = 0; j < maxPlayerUnits; j++)
                 {
                     if ((Mathf.Abs(playerUnits[j].point.x - enemyUnits[i].point.x) <= 1) && (Mathf.Abs(playerUnits[j].point.y - enemyUnits[i].point.y) <= 1))
                     {
@@ -344,7 +371,7 @@ public class BattleSceneControl : MonoBehaviour {
                     {
                         for (int k = 0; k < 6; k++)
                         {
-                            for (int r = 0; r < 3; r++)
+                            for (int r = 0; r < maxPlayerUnits; r++)
                             {
                                 if ((map[j][k].movebleObject.isEmpty()) && (map[j][k].obj.isEmpty()) && ((Mathf.Abs(playerUnits[r].point.x - j) <= 1) && (Mathf.Abs(playerUnits[r].point.y - k)) <= 1))
                                 {
@@ -389,7 +416,7 @@ public class BattleSceneControl : MonoBehaviour {
                 }
             }
             enemyUnitNow++;
-            if (enemyUnitNow == 3)
+            if (enemyUnitNow == maxEnemyUnits)
             {
                 enemyTurn = false;
             }
@@ -401,7 +428,7 @@ public class BattleSceneControl : MonoBehaviour {
     Unit GetUnit(PointXY p)
     {
         Unit un = playerUnits[0];
-        for(int i = 0; i < 3; i++)
+        for(int i = 0; i < maxPlayerUnits; i++)
         {
             if ((playerUnits[i].point.x == p.x) && (playerUnits[i].point.y == p.y))
             {
@@ -409,7 +436,7 @@ public class BattleSceneControl : MonoBehaviour {
                 break;
             }
         }
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < maxEnemyUnits; i++)
         {
             if ((enemyUnits[i].point.x == p.x) && (enemyUnits[i].point.y == p.y))
             {
@@ -423,7 +450,7 @@ public class BattleSceneControl : MonoBehaviour {
     GameObject GetUnitGO(PointXY p)
     {
         GameObject un = null;
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < maxPlayerUnits; i++)
         {
             if ((playerUnits[i].point.x == p.x) && (playerUnits[i].point.y == p.y))
             {
@@ -431,7 +458,7 @@ public class BattleSceneControl : MonoBehaviour {
                 break;
             }
         }
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < maxEnemyUnits; i++)
         {
             if ((enemyUnits[i].point.x == p.x) && (enemyUnits[i].point.y == p.y))
             {
@@ -486,7 +513,7 @@ public class BattleSceneControl : MonoBehaviour {
 
         if (tf)
         {
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < maxPlayerUnits; i++)
             {
                 if (playerUnits[i] == playerUnit)
                 {
@@ -502,7 +529,7 @@ public class BattleSceneControl : MonoBehaviour {
         else
         {
            // enemyUnitNow = 0;
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < maxEnemyUnits; i++)
             {
                 if (enemyUnits[i] == playerUnit)
                 {
@@ -603,9 +630,12 @@ public class BattleSceneControl : MonoBehaviour {
            // Debug.Log(tf);
             enemyUnitNow = 0;
             enemyTurn = true;
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < maxPlayerUnits; i++)
             {
                 playerUnits[i].unit.calculateNewTurn();
+            }
+            for (int i = 0; i < 3; i++)
+            {
                 enemyUnits[i].unit.calculateNewTurn();
             }
             chosenPoint = new PointXY(playerUnits[0].point);

@@ -15,6 +15,11 @@ public class Damage{
         this.damage = 0;
     }
 
+    public Damage(string s)
+    {
+        this.damage = PlayerPrefs.GetInt(s + "_Damage_damage");
+    }
+
     public Damage (Damage dmg, Armour arm)
     {
         this.damage = dmg.damage - arm.armour;
@@ -28,5 +33,10 @@ public class Damage{
     public void Clear()
     {
         this.damage = 0;
+    }
+
+    public void Save(string s)
+    {
+        PlayerPrefs.SetInt(s + "_Damage_damage", this.damage);
     }
 }

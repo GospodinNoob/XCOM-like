@@ -19,4 +19,14 @@ public class Armour : MonoBehaviour {
     {
         this.armour = 0;
     }
+
+    public Armour(string s)
+    {
+        this.armour = PlayerPrefs.GetInt(s + "_Armour_armour");
+    }
+
+    public void Save(string s)
+    {
+        PlayerPrefs.SetInt(s + "_Armour_armour", this.armour);
+    }
 }
