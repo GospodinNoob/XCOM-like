@@ -43,6 +43,7 @@ public class BattleSceneControl : MonoBehaviour {
 
     void Rotation(GameObject go, int vx, int vy)
     {
+       // Debug.Log(vx.ToString() + " " + vy.ToString());
         int angle = 0;
         if (vx == 1)
         {
@@ -304,6 +305,17 @@ public class BattleSceneControl : MonoBehaviour {
 
     void EndGame(bool tf)
     {
+        for(int i = 0; i < maxPlayerUnits; i++)
+        {
+            if (playerUnits[i].unit.id == 0)
+            {
+                PlayerPrefs.SetInt("PlayerUnitOnMission" + i.ToString(), 0);
+            }
+            else
+            {
+                PlayerPrefs.SetInt("PlayerUnitOnMission" + i.ToString(), 1);
+            }
+        }
         Application.LoadLevel("PlaningScene");
     }
 
@@ -340,13 +352,13 @@ public class BattleSceneControl : MonoBehaviour {
         }
 
         if (enemyTurn && !block)
-        {
+        {   
             int i = enemyUnitNow;
             //Debug.Log(i);
             if (enemyUnits[i].unit.id != 0)
             {
                 Dijkstra(enemyUnits[i].point);
-                Debug.Log(enemyUnits[i]);
+               // Debug.Log(enemyUnits[i]);
                 bool tf = false;
                 Unit targetUnit = new Unit();
                 for (int j = 0; j < maxPlayerUnits; j++)
@@ -402,12 +414,6 @@ public class BattleSceneControl : MonoBehaviour {
                         enemyUnits[i].unit.doAction(cost);
                         //chunks[p.x][p.y].GetComponent<SpriteActive>().setIdActive(0, false);
                         Swap(enemyUnits[i].point, p, false);
-                        if (enemyUnits[i].unit.curAP > 0)
-                        {
-                            Rotation(enemyUnitsGO[i], -enemyUnits[i].point.x + targetUnit.point.x, -enemyUnits[i].point.y + targetUnit.point.y);
-                            targetUnit.unit.DealDamage(enemyUnits[i].unit.damage);
-                            enemyUnits[i].unit.curAP = 0;
-                        }
                     }
                     else
                     {
@@ -415,7 +421,10 @@ public class BattleSceneControl : MonoBehaviour {
                     }
                 }
             }
-            enemyUnitNow++;
+            if (enemyUnits[enemyUnitNow].unit.curAP == 0)
+            {
+                enemyUnitNow++;
+            }
             if (enemyUnitNow == maxEnemyUnits)
             {
                 enemyTurn = false;
@@ -616,7 +625,7 @@ public class BattleSceneControl : MonoBehaviour {
     {
         Unit un = playerUnits[0];
         bool tf = true;
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < maxPlayerUnits; i++)
         {
             if ((playerUnits[i].unit.id != 0) && (playerUnits[i].unit.curAP > 0))
             {
@@ -634,7 +643,7 @@ public class BattleSceneControl : MonoBehaviour {
             {
                 playerUnits[i].unit.calculateNewTurn();
             }
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < maxEnemyUnits; i++)
             {
                 enemyUnits[i].unit.calculateNewTurn();
             }

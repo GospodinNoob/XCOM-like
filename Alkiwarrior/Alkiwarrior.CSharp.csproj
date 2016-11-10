@@ -74,6 +74,7 @@
     <Compile Include="Assets\BattleScene\SpriteActive.cs" />
     <Compile Include="Assets\BattleScene\Unit.cs" />
     <Compile Include="Assets\BattleScene\UnitMove.cs" />
+    <Compile Include="Assets\MainMenuScene\MainMenu.cs" />
     <Compile Include="Assets\PlaningScene\EventGenerator.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\SyntaxTree\UnityVS\2015\UnityVS.CSharp.targets" />

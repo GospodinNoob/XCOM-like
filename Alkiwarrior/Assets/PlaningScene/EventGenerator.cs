@@ -17,12 +17,38 @@ public class EventGenerator : MonoBehaviour {
         onMission = new bool[6];
         a = Random.Range(2, 5);
         dx = Screen.width / 6;
+        int cou = 0;
         for (int i = 0; i < 6; i++)
         {
-            units[i] = new MovebleObject(1, true);
-            onMission[i] = false;
+            if (PlayerPrefs.GetInt("NewGame") == 0)
+            {
+                //units[i] = new MovebleObject(1, true);
+                if (PlayerPrefs.GetInt("PlayerUnitBool" + i.ToString()) == 1)
+                {
+                    if (PlayerPrefs.GetInt("PlayerUnitOnMission" + cou.ToString()) == 1)  
+                    {
+                        units[i] = new MovebleObject("PlayerUnitOnBase" + i.ToString());
+                    }
+                    else
+                    {
+                        units[i] = new MovebleObject();
+                    }
+                    cou++;
+                }
+                else
+                {
+                    units[i] = new MovebleObject("PlayerUnitOnBase" + i.ToString());
+                }
+                onMission[i] = false;
+            }
+            else
+            {
+                units[i] = new MovebleObject(1, true);
+            }
         }
-	}
+        PlayerPrefs.SetInt("NewGame", 0);
+
+    }
 	
 	// Update is called once per frame
 	void Update () {
@@ -59,10 +85,16 @@ public class EventGenerator : MonoBehaviour {
                 counter = 0;
                 for (int i = 0; i < 6; i++)
                 {
+                    units[i].Save("PlayerUnitOnBase" + i.ToString());
                     if (onMission[i])
                     {
+                        PlayerPrefs.SetInt("PlayerUnitBool" + i.ToString(), 1);
                         units[i].Save("PlayerUnit" + counter.ToString());
                         counter++;
+                    }
+                    else
+                    {
+                        PlayerPrefs.SetInt("PlayerUnitBool" + i.ToString(), 0);
                     }
                 }
                 PlayerPrefs.SetInt("MissionDifficultly", a);
