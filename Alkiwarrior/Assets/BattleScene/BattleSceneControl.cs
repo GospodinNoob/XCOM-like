@@ -121,11 +121,11 @@ public class BattleSceneControl : MonoBehaviour {
         return Mathf.Sqrt((a - c) * (a - c) + (b - d) * (b - d));
     }
 
-    void DealDamage(Damage dmg, int x, int y)
+    void DealDamage(Damage dmg, int x, int y, int bon)
     {
         if (!map[x][y].obj.isEmpty())
         {
-            map[x][y].obj.DealDamage(dmg);
+            map[x][y].obj.DealDamage(dmg, bon);
             if (map[x][y].obj.id == 0)
             {
                 chunks[x][y].GetComponent<SpriteActive>().setIdActive(1, false);
@@ -133,7 +133,7 @@ public class BattleSceneControl : MonoBehaviour {
         }
         if (!map[x][y].movebleObject.isEmpty())
         {
-            map[x][y].movebleObject.DealDamage(dmg);
+            map[x][y].movebleObject.DealDamage(dmg, bon);
         }
     }
 
@@ -382,7 +382,7 @@ public class BattleSceneControl : MonoBehaviour {
                     enemyUnits[i].unit.curAP = 0;
                     enemyUnits[i].SetRotation(new PointXY(-enemyUnits[i].point.x + targetUnit.point.x, -enemyUnits[i].point.y + targetUnit.point.y));
                     Rotation(enemyUnitsGO[i], -enemyUnits[i].point.x + targetUnit.point.x, -enemyUnits[i].point.y + targetUnit.point.y);
-                    targetUnit.unit.DealDamage(enemyUnits[i].unit.damage);
+                    targetUnit.unit.DealDamage(enemyUnits[i].unit.damage, enemyUnits[i].unit.bonusDamage);
                 }
                 else
                 {
@@ -725,7 +725,7 @@ public class BattleSceneControl : MonoBehaviour {
                                 {
                                     GetUnit(chosenPoint).SetRotation(new PointXY(-GetUnit(chosenPoint).point.x + i, -GetUnit(chosenPoint).point.y + 5 - j));
                                     Rotation(GetUnitGO(chosenPoint), -GetUnit(chosenPoint).point.x + i, -GetUnit(chosenPoint).point.y +  5 - j);
-                                    DealDamage(GetUnit(chosenPoint).unit.damage, i, 5 - j);
+                                    DealDamage(GetUnit(chosenPoint).unit.damage, i, 5 - j, GetUnit(chosenPoint).unit.bonusDamage);
                                     GetUnit(chosenPoint).unit.curAP = 0;
                                     CheckNextTurn();
                                 }

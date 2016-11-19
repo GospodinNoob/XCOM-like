@@ -16,10 +16,17 @@ public class EventGenerator : MonoBehaviour {
     bool skillMenu;
     bool equipMenu;
 
+    int rightArmList = 1;
+    int armourArmList = 1;
+    float verticalScrollBarValue;
+    bool rightArm;
+    bool armourShow;
+
     // Use this for initialization
     void Start () {
         skillMenu = false;
         equipMenu = false;
+        rightArm = false;
         curCheckUnit = 0;
         units = new MovebleObject[6];
         onMission = new bool[6];
@@ -143,6 +150,8 @@ public class EventGenerator : MonoBehaviour {
         if (GUI.Button(new Rect(Screen.width / 2, Screen.height / 3 * 2 - dx / 2 * 3, Screen.width / 4, dx / 2), "Equip"))
         {
             equipMenu = !equipMenu;
+            armourShow = false;
+            rightArm = false;
             skillMenu = false;
         }
         if (GUI.Button(new Rect(Screen.width / 4 * 3, Screen.height / 3 * 2 - dx / 2 * 3, Screen.width / 4, dx / 2), "Skills"))
@@ -188,17 +197,40 @@ public class EventGenerator : MonoBehaviour {
         }
         if (equipMenu)
         {
-            if (GUI.Button(new Rect(Screen.width / 2, 0, Screen.width / 4, Screen.height / 6), units[curCheckUnit].damage.name))
+            if (rightArm)
             {
-
+                //Debug.Log(2);
+                verticalScrollBarValue =  GUI.VerticalScrollbar(new Rect(Screen.width / 2, 0, 20, Screen.height / 3 * 2 - dx * 2), verticalScrollBarValue, 1.0F, 0, dx * rightArmList);
+                if (GUI.Button(new Rect(Screen.width / 2 + 20, 0 - verticalScrollBarValue, Screen.width / 2 - 20, dx), "Falchion(0, 2, 2, 4) 2 1"))
+                {
+                    units[curCheckUnit].SetDamage(1);
+                  //  Debug.Log(1);
+                    rightArm = false;
+                }
             }
-            if (GUI.Button(new Rect(Screen.width / 4 * 3, 0, Screen.width / 4, Screen.height / 6), ""))
+            if (armourShow)
             {
-
+                verticalScrollBarValue = GUI.VerticalScrollbar(new Rect(Screen.width / 2, 0, 20, Screen.height / 3 * 2 - dx * 2), verticalScrollBarValue, 1.0F, 0, dx * armourArmList);
+                if (GUI.Button(new Rect(Screen.width / 2 + 20, 0 - verticalScrollBarValue, Screen.width / 2 - 20, dx), "Quilted armor(1, 2, 1, 1) 1"))
+                {
+                    units[curCheckUnit].SetArmour(1);
+                    armourShow = false;
+                }
             }
-            if (GUI.Button(new Rect(Screen.width / 2, Screen.height / 6, Screen.width / 4, Screen.height / 6), units[curCheckUnit].armour.name))
+            if (!rightArm && !armourShow)
             {
+                if (GUI.Button(new Rect(Screen.width / 2, 0, Screen.width / 4, Screen.height / 6), units[curCheckUnit].damage.name))
+                {
+                    rightArm = !rightArm;
+                }
+                if (GUI.Button(new Rect(Screen.width / 4 * 3, 0, Screen.width / 4, Screen.height / 6), ""))
+                {
 
+                }
+                if (GUI.Button(new Rect(Screen.width / 2, Screen.height / 6, Screen.width / 4, Screen.height / 6), units[curCheckUnit].armour.name))
+                {
+                    armourShow = !armourShow;
+                }
             }
         }
     }

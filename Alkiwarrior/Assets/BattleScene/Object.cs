@@ -22,10 +22,15 @@ public class Object{
         }
     }
 
-    public void DealDamage(Damage dmg)
+    public void DealDamage(Damage dmg, int bon)
     {
         Damage reducedDamage = new Damage(dmg, this.armour);
-        this.curHits -= Mathf.Max(0, reducedDamage.Sum());
+        int sum = reducedDamage.Sum();
+        if (sum > 0)
+        {
+            sum += bon;
+        }
+        this.curHits -= Mathf.Max(0, sum);
         if (this.curHits <= 0)
         {
             this.id = 0;
