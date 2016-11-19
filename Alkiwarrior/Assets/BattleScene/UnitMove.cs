@@ -71,7 +71,9 @@ public class UnitMove : MonoBehaviour {
         unit.gameObject.transform.rotation = Quaternion.Euler(0, 0, angle - 90);
     }
 
-    public void SetWay(GameObject go, ArrayList way)
+    Unit unitObject;
+
+    public void SetWay(Unit un, GameObject go, ArrayList way)
     {
         newWay = new ArrayList();
         for (int i = way.Count - 1; i >= 0; i--)
@@ -82,6 +84,7 @@ public class UnitMove : MonoBehaviour {
         segment = 1;
         timer = 0;
         flag = true;
+        unitObject = un;
     }
     float len;
 	
@@ -102,6 +105,9 @@ public class UnitMove : MonoBehaviour {
                 if (Time.time - timer > len)
                 {
                     Transform tr = this.gameObject.transform;
+                    //Debug.Log((b.x - a.x).ToString() + " " + (b.y - a.y).ToString());
+                    unitObject.SetRotation(new PointXY(b.x - a.x, b.y - a.y));
+                    //Debug.Log(unitObject.rotation.x.ToString() + " " + unitObject.rotation.y.ToString());
                     Rotation(b.x - a.x, b.y - a.y);
                     len = Mathf.Sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
                     unit.gameObject.transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * a.x, tr.position.y - dx / 2 - dx + dx * a.y, tr.position.z);

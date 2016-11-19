@@ -41,6 +41,8 @@ public class BattleSceneControl : MonoBehaviour {
     PointXY[][] parents;
     bool[][] flags;
 
+    Unit moveO;
+
     void Rotation(GameObject go, int vx, int vy)
     {
        // Debug.Log(vx.ToString() + " " + vy.ToString());
@@ -153,7 +155,7 @@ public class BattleSceneControl : MonoBehaviour {
 
         dist[p.x][p.y] = 0;
         int step = 0;
-        while ((dist[p.x][p.y] < INF - 1) && (step < 50))
+        while ((dist[p.x][p.y] < INF - 1) && (step < 500))
         {
             step++;
            // Dep.yug.Log(dist[p.x][p.y]);
@@ -208,10 +210,12 @@ public class BattleSceneControl : MonoBehaviour {
                 a = Random.Range(0, 6);
                 b = Random.Range(0, 6);
             }
-            enemyUnits[i] = new Unit(a, b, false);
+            enemyUnits[i] = new Unit(a, b, false, new PointXY(0, -1));
+            //Debug.Log(enemyUnitsGO[i]);
             Transform tr = this.gameObject.transform;
             enemyUnitsGO[i] = (GameObject)GameObject.Instantiate(humanGO, tr);
             enemyUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * a, tr.position.y - dx / 2 - dx + dx * b, tr.position.z);
+            Rotation(enemyUnitsGO[i], enemyUnits[i].rotation.x, enemyUnits[i].rotation.y);
             float scale = enemyUnitsGO[i].transform.localScale.x * Screen.width / 6 / 2 * (float)0.74 * (53 / dx);
             enemyUnitsGO[i].transform.localScale = new Vector3(scale, scale, scale);
             map[a][b].movebleObject = enemyUnits[i].unit;
@@ -286,11 +290,13 @@ public class BattleSceneControl : MonoBehaviour {
                 a = Random.Range(0, 6);
                 b = Random.Range(0, 6);
             }
-            playerUnits[i] = new Unit(a, b, "PlayerUnit" + i.ToString(), true);
+            playerUnits[i] = new Unit(a, b, "PlayerUnit" + i.ToString(), true, new PointXY(0, 1));
+            //Debug.Log(playerUnitsGO[i]);
             Transform tr = this.gameObject.transform;
             playerUnitsGO[i] = (GameObject) GameObject.Instantiate(humanGO, tr);
             playerUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * a, tr.position.y - dx / 2 - dx + dx * b, tr.position.z);
             float scale = playerUnitsGO[i].transform.localScale.x * Screen.width / 6 / 2 * (float)0.74 * (53 / dx);
+            Rotation(playerUnitsGO[i], playerUnits[i].rotation.x, playerUnits[i].rotation.y);
             playerUnitsGO[i].transform.localScale = new Vector3(scale, scale, scale);
             map[a][b].movebleObject = playerUnits[i].unit;
         }
@@ -333,9 +339,11 @@ public class BattleSceneControl : MonoBehaviour {
                 counter1++;
             }
         }
+       // Debug.Log(maxEnemyUnits);
         for (int i = 0; i < maxEnemyUnits; i++)
         {
-                if (enemyUnits[i].unit.id == 0)
+         //   Debug.Log("i " + i.ToString());
+            if (enemyUnits[i].unit.id == 0)
             {
                 enemyUnitsGO[i].active = false;
                 counter2++;
@@ -355,7 +363,7 @@ public class BattleSceneControl : MonoBehaviour {
         {   
             int i = enemyUnitNow;
             //Debug.Log(i);
-            if (enemyUnits[i].unit.id != 0)
+            if (!enemyUnits[i].unit.isEmpty())
             {
                 Dijkstra(enemyUnits[i].point);
                // Debug.Log(enemyUnits[i]);
@@ -372,6 +380,7 @@ public class BattleSceneControl : MonoBehaviour {
                 if (tf)
                 {
                     enemyUnits[i].unit.curAP = 0;
+                    enemyUnits[i].SetRotation(new PointXY(-enemyUnits[i].point.x + targetUnit.point.x, -enemyUnits[i].point.y + targetUnit.point.y));
                     Rotation(enemyUnitsGO[i], -enemyUnits[i].point.x + targetUnit.point.x, -enemyUnits[i].point.y + targetUnit.point.y);
                     targetUnit.unit.DealDamage(enemyUnits[i].unit.damage);
                 }
@@ -420,6 +429,10 @@ public class BattleSceneControl : MonoBehaviour {
                         enemyUnits[i].unit.curAP = 0;
                     }
                 }
+            }
+            if (enemyUnits[enemyUnitNow].unit.isEmpty())
+            {
+                enemyUnitNow++;
             }
             if (enemyUnits[enemyUnitNow].unit.curAP == 0)
             {
@@ -529,7 +542,7 @@ public class BattleSceneControl : MonoBehaviour {
                     Transform tr = this.gameObject.transform;
                     //  Debug.Log(1);
                     block = true;
-                    this.GetComponent<UnitMove>().SetWay(playerUnitsGO[i], way);
+                    this.GetComponent<UnitMove>().SetWay(playerUnits[i], playerUnitsGO[i], way);
                 }
                 //  Debug.Log(playerUnits[i].x);
                 //playerUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * playerUnits[i].point.x, tr.position.y - dx / 2 - dx + dx * playerUnits[i].point.y, tr.position.z);
@@ -546,7 +559,7 @@ public class BattleSceneControl : MonoBehaviour {
                     //  Debug.Log(playerUnits[i].x);
                     block = true;
                     //enemyUnitNow = 0;
-                    this.GetComponent<UnitMove>().SetWay(enemyUnitsGO[i], way);
+                    this.GetComponent<UnitMove>().SetWay(enemyUnits[i], enemyUnitsGO[i], way);
                     //enemyUnitsGO[i].transform.position = new Vector3(tr.position.x - dx / 2 - 2 * dx + dx * enemyUnits[i].point.x, tr.position.y - dx / 2 - dx + dx * enemyUnits[i].point.y, tr.position.z);
                 }
             }
@@ -653,6 +666,10 @@ public class BattleSceneControl : MonoBehaviour {
 
     void OnGUI()
     {
+     /*   if (moveO != null)
+        {
+            Debug.Log(moveO.rotation.x.ToString() + " " + moveO.rotation.y.ToString());
+        }*/
         if ((!enemyTurn) && (!block))
         {
             for (int i = 0; i < 6; i++)
@@ -692,6 +709,7 @@ public class BattleSceneControl : MonoBehaviour {
                                 {
                                     int k = Mathf.CeilToInt(dist[i][5 - j] / GetUnit(chosenPoint).unit.speed);
                                     GetUnit(chosenPoint).unit.doAction(k);
+                                    moveO = GetUnit(chosenPoint);
                                     Swap(chosenPoint, new PointXY(i, 5 - j), true);
                                     chosenPoint = new PointXY(i, 5 - j);
                                     if (GetUnit(chosenPoint).unit.curAP == 0)
@@ -705,6 +723,7 @@ public class BattleSceneControl : MonoBehaviour {
                             {
                                 if ((GetUnit(chosenPoint).unit.curAP > 0) && (Mathf.Abs(chosenPoint.x - i) <= 1) && (Mathf.Abs(chosenPoint.y - (5 - j)) <= 1) && ((!map[i][5 - j].obj.isEmpty()) || (!map[i][5 - j].movebleObject.isEmpty() && !map[i][5 - j].movebleObject.player)))
                                 {
+                                    GetUnit(chosenPoint).SetRotation(new PointXY(-GetUnit(chosenPoint).point.x + i, -GetUnit(chosenPoint).point.y + 5 - j));
                                     Rotation(GetUnitGO(chosenPoint), -GetUnit(chosenPoint).point.x + i, -GetUnit(chosenPoint).point.y +  5 - j);
                                     DealDamage(GetUnit(chosenPoint).unit.damage, i, 5 - j);
                                     GetUnit(chosenPoint).unit.curAP = 0;
@@ -745,8 +764,8 @@ public class BattleSceneControl : MonoBehaviour {
                     GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6, Screen.width / 3, dy * 2), chosenChunk.movebleObject.name);
                     GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 2, Screen.width / 3, dy * 2), "Hits " + chosenChunk.movebleObject.curHits + "/" + chosenChunk.movebleObject.maxHits);
                     GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 3, Screen.width / 3, dy * 2), "AP " + chosenChunk.movebleObject.curAP + "/" + chosenChunk.movebleObject.maxAP);
-                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 4, Screen.width / 3, dy * 2), "Damage " + chosenChunk.movebleObject.damage.damage);
-                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 5, Screen.width / 3, dy * 2), "Armor " + chosenChunk.movebleObject.armour.armour);
+                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 4, Screen.width / 3, dy * 2), "D " + chosenChunk.movebleObject.damage.piercingDamage + " " + chosenChunk.movebleObject.damage.slashDamage + " " + chosenChunk.movebleObject.damage.crashDamage + " " + chosenChunk.movebleObject.damage.axeDamage);
+                    GUI.Label(new Rect(0, dy * 6 + dx * 2 / 6 * 5, Screen.width / 3, dy * 2), "A " + chosenChunk.movebleObject.armour.piercingArmour + " " + chosenChunk.movebleObject.armour.slashArmour + " " + chosenChunk.movebleObject.armour.crashArmour + " " + chosenChunk.movebleObject.armour.axeArmour);
                 }
             }
         }
