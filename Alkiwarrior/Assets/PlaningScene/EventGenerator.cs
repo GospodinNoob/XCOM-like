@@ -184,7 +184,7 @@ public class EventGenerator : MonoBehaviour {
         }
         if (skillMenu)
         {
-
+             
         }
         if (equipMenu)
         {
